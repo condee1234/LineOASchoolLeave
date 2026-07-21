@@ -227,10 +227,8 @@
     </div>
 
     <div class="field">
-      <label for="studentSelect">Name of student</label>
-      <select id="studentSelect" required disabled>
-        <option value="" disabled selected>Select form first</option>
-      </select>
+      <label for="studentName">Name of student</label>
+      <input type="text" id="studentName" placeholder="Enter student's full name" required />
     </div>
 
     <hr class="section-divider" />
@@ -283,7 +281,7 @@
 <script>
   // ---- CONFIG: replace with your own values ----
   const LIFF_ID = "2010725060-1DswtF8o";
-  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxcFIb7RRiyP3T_89OfCCrztGvf-ONsegK6WhJXgWFwDhFPkDx2fX7VVgXKiAsGiCYUpw/exec";
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx97slDYKoNvzWxrfLV-BDs6gR6MtQhvWh1VbCLA9WjVVN51HoA5R_k_mhN_FJZSndnUA/exec";
   // ------------------------------------------------
 
   let userProfile = null;
@@ -294,7 +292,7 @@
 
   const yearSelect = document.getElementById("yearSelect");
   const formSelect = document.getElementById("formSelect");
-  const studentSelect = document.getElementById("studentSelect");
+  const studentNameInput = document.getElementById("studentName");
   const submitBtn = document.getElementById("submitBtn");
 
   async function init() {
@@ -376,47 +374,25 @@
     formSelect.disabled = forms.length === 0;
   }
 
-  function populateStudentOptions(selectedYear, selectedForm) {
-    const students = [...new Set(
-      lookupRows
-        .filter(r => r.year === selectedYear && r.form === selectedForm)
-        .map(r => r.student)
-    )].sort();
-
-    studentSelect.innerHTML = '<option value="" disabled selected>Select student</option>';
-    students.forEach(s => {
-      const opt = document.createElement("option");
-      opt.value = s;
-      opt.textContent = s;
-      studentSelect.appendChild(opt);
-    });
-
-    studentSelect.disabled = students.length === 0;
-  }
-
   function resetSelect(selectEl, placeholder) {
     selectEl.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
     selectEl.disabled = true;
   }
 
   function updateSubmitAvailability() {
-    submitBtn.disabled = !(yearSelect.value && formSelect.value && studentSelect.value);
+    submitBtn.disabled = !(yearSelect.value && formSelect.value && studentNameInput.value.trim());
   }
 
+  // Year still cascades into Form, same as before.
   yearSelect.addEventListener("change", function () {
     resetSelect(formSelect, "Select form");
-    resetSelect(studentSelect, "Select form first");
     populateFormOptions(yearSelect.value);
     updateSubmitAvailability();
   });
 
-  formSelect.addEventListener("change", function () {
-    resetSelect(studentSelect, "Select student");
-    populateStudentOptions(yearSelect.value, formSelect.value);
-    updateSubmitAvailability();
-  });
+  formSelect.addEventListener("change", updateSubmitAvailability);
 
-  studentSelect.addEventListener("change", updateSubmitAvailability);
+  studentNameInput.addEventListener("input", updateSubmitAvailability);
 
   // ---------------- Date handling ----------------
 
@@ -456,7 +432,7 @@
 
     const year = yearSelect.value;
     const form = formSelect.value;
-    const studentName = studentSelect.value;
+    const studentName = studentNameInput.value.trim();
     const leaveType = document.getElementById("leaveType").value;
     const startDate = startDateEl.value;
     const endDate = endDateEl.value;
