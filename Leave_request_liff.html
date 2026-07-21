@@ -250,11 +250,28 @@
     try {
       await liff.init({ liffId: LIFF_ID });
 
+      // liff.init() itself checks for an existing LINE login session
+      // (LIFF SDK stores and restores this automatically — no manual
+      // storage of userId needed on our side).
+      //
+      // - If the user already has a valid session, liff.isLoggedIn()
+      //   is true immediately and we can call getProfile() right away.
+      // - If there's no session (first visit, logged out, or the
+      //   session expired), isLoggedIn() is false and we must send
+      //   them through LINE's login screen before we can trust any
+      //   userId.
       if (!liff.isLoggedIn()) {
+        // No explicit redirectUri here on purpose: passing
+        // window.location.href works on iOS but can include extra
+        // query params on Android's in-app WebView that don't match
+        // the registered Endpoint URL exactly, which LINE's login
+        // server rejects with a 400. Letting LIFF fall back to its
+        // own default redirect avoids that mismatch on both platforms.
         liff.login();
-        return;
+        return; // page will redirect now; nothing else to do this run
       }
 
+      // Logged in -> LIFF already knows who this is, no re-login needed.
       userProfile = await liff.getProfile();
       document.getElementById("profileName").textContent = userProfile.displayName;
       document.getElementById("profileImg").src = userProfile.pictureUrl || "";
