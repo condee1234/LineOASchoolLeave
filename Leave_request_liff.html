@@ -95,6 +95,11 @@
     background: white;
     color: var(--text);
   }
+  select:disabled {
+    background: #F2F3F5;
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
   select:focus, input:focus, textarea:focus {
     outline: none;
     border-color: var(--line-green);
@@ -103,6 +108,14 @@
   textarea {
     resize: vertical;
     min-height: 80px;
+  }
+  .row-3 {
+    display: flex;
+    gap: 8px;
+  }
+  .row-3 .field {
+    flex: 1;
+    min-width: 0;
   }
   .date-row {
     display: flex;
@@ -116,6 +129,11 @@
     color: var(--line-green-dark);
     font-weight: 600;
     margin-top: 6px;
+  }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
   }
   button[type="submit"] {
     width: 100%;
@@ -193,6 +211,30 @@
 
 <div id="formScreen">
   <form id="leaveForm">
+
+    <div class="field">
+      <label for="yearSelect">Year</label>
+      <select id="yearSelect" required>
+        <option value="" disabled selected>Loading years...</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="formSelect">Form</label>
+      <select id="formSelect" required disabled>
+        <option value="" disabled selected>Select year first</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="studentSelect">Name of student</label>
+      <select id="studentSelect" required disabled>
+        <option value="" disabled selected>Select form first</option>
+      </select>
+    </div>
+
+    <hr class="section-divider" />
+
     <div class="field">
       <label for="leaveType">Leave type</label>
       <select id="leaveType" required>
@@ -222,7 +264,7 @@
       <textarea id="reason" placeholder="Briefly describe the reason for your leave" required></textarea>
     </div>
 
-    <button type="submit" id="submitBtn">Submit request</button>
+    <button type="submit" id="submitBtn" disabled>Submit request</button>
   </form>
 </div>
 
@@ -246,6 +288,15 @@
 
   let userProfile = null;
 
+  // Cascading lookup data pulled from Sheet2 (Year | Form | Name of students).
+  // Each row: { year, form, student }
+  let lookupRows = [];
+
+  const yearSelect = document.getElementById("yearSelect");
+  const formSelect = document.getElementById("formSelect");
+  const studentSelect = document.getElementById("studentSelect");
+  const submitBtn = document.getElementById("submitBtn");
+
   async function init() {
     try {
       await liff.init({ liffId: LIFF_ID });
@@ -253,38 +304,121 @@
       // liff.init() itself checks for an existing LINE login session
       // (LIFF SDK stores and restores this automatically — no manual
       // storage of userId needed on our side).
-      //
-      // - If the user already has a valid session, liff.isLoggedIn()
-      //   is true immediately and we can call getProfile() right away.
-      // - If there's no session (first visit, logged out, or the
-      //   session expired), isLoggedIn() is false and we must send
-      //   them through LINE's login screen before we can trust any
-      //   userId.
       if (!liff.isLoggedIn()) {
-        // No explicit redirectUri here on purpose: passing
-        // window.location.href works on iOS but can include extra
-        // query params on Android's in-app WebView that don't match
-        // the registered Endpoint URL exactly, which LINE's login
-        // server rejects with a 400. Letting LIFF fall back to its
-        // own default redirect avoids that mismatch on both platforms.
+        // No explicit redirectUri on purpose — see prior notes on
+        // Android WebView query-param mismatches causing 400s.
         liff.login();
-        return; // page will redirect now; nothing else to do this run
+        return;
       }
 
-      // Logged in -> LIFF already knows who this is, no re-login needed.
       userProfile = await liff.getProfile();
       document.getElementById("profileName").textContent = userProfile.displayName;
       document.getElementById("profileImg").src = userProfile.pictureUrl || "";
+
+      // Load Year/Form/Student lookup data once profile is confirmed.
+      await loadLookups();
+
     } catch (err) {
-      // Surface the real LIFF error (code + message) instead of a generic
-      // message — this is essential for diagnosing platform-specific
-      // issues. Remove/simplify this once the flow is confirmed working.
       console.error("LIFF init/login error:", err);
       const code = err && err.code ? err.code : "unknown_code";
       const detail = err && err.message ? err.message : JSON.stringify(err);
       showError(`LIFF error [${code}]: ${detail}`);
     }
   }
+
+  // ---------------- Lookup loading + cascading dropdowns ----------------
+
+  async function loadLookups() {
+    try {
+      const res = await fetch(APPS_SCRIPT_URL + "?action=lookups");
+      const data = await res.json();
+
+      if (!data.ok) {
+        throw new Error(data.error || "Failed to load lookup data.");
+      }
+
+      lookupRows = data.rows || [];
+      populateYearOptions();
+
+    } catch (err) {
+      console.error("Failed to load lookups:", err);
+      yearSelect.innerHTML = '<option value="" disabled selected>Failed to load — reopen form</option>';
+    }
+  }
+
+  function populateYearOptions() {
+    const years = [...new Set(lookupRows.map(r => r.year))].sort();
+
+    yearSelect.innerHTML = '<option value="" disabled selected>Select year</option>';
+    years.forEach(y => {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      yearSelect.appendChild(opt);
+    });
+
+    yearSelect.disabled = false;
+  }
+
+  function populateFormOptions(selectedYear) {
+    const forms = [...new Set(
+      lookupRows.filter(r => r.year === selectedYear).map(r => r.form)
+    )].sort();
+
+    formSelect.innerHTML = '<option value="" disabled selected>Select form</option>';
+    forms.forEach(f => {
+      const opt = document.createElement("option");
+      opt.value = f;
+      opt.textContent = f;
+      formSelect.appendChild(opt);
+    });
+
+    formSelect.disabled = forms.length === 0;
+  }
+
+  function populateStudentOptions(selectedYear, selectedForm) {
+    const students = [...new Set(
+      lookupRows
+        .filter(r => r.year === selectedYear && r.form === selectedForm)
+        .map(r => r.student)
+    )].sort();
+
+    studentSelect.innerHTML = '<option value="" disabled selected>Select student</option>';
+    students.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s;
+      opt.textContent = s;
+      studentSelect.appendChild(opt);
+    });
+
+    studentSelect.disabled = students.length === 0;
+  }
+
+  function resetSelect(selectEl, placeholder) {
+    selectEl.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
+    selectEl.disabled = true;
+  }
+
+  function updateSubmitAvailability() {
+    submitBtn.disabled = !(yearSelect.value && formSelect.value && studentSelect.value);
+  }
+
+  yearSelect.addEventListener("change", function () {
+    resetSelect(formSelect, "Select form");
+    resetSelect(studentSelect, "Select form first");
+    populateFormOptions(yearSelect.value);
+    updateSubmitAvailability();
+  });
+
+  formSelect.addEventListener("change", function () {
+    resetSelect(studentSelect, "Select student");
+    populateStudentOptions(yearSelect.value, formSelect.value);
+    updateSubmitAvailability();
+  });
+
+  studentSelect.addEventListener("change", updateSubmitAvailability);
+
+  // ---------------- Date handling ----------------
 
   const startDateEl = document.getElementById("startDate");
   const endDateEl = document.getElementById("endDate");
@@ -315,14 +449,23 @@
   startDateEl.addEventListener("change", updateDayCount);
   endDateEl.addEventListener("change", updateDayCount);
 
+  // ---------------- Submit ----------------
+
   document.getElementById("leaveForm").addEventListener("submit", async function (e) {
     e.preventDefault();
 
+    const year = yearSelect.value;
+    const form = formSelect.value;
+    const studentName = studentSelect.value;
     const leaveType = document.getElementById("leaveType").value;
     const startDate = startDateEl.value;
     const endDate = endDateEl.value;
     const reason = document.getElementById("reason").value.trim();
 
+    if (!year || !form || !studentName) {
+      showError("Please select year, form, and student name.");
+      return;
+    }
     if (new Date(endDate) < new Date(startDate)) {
       dateErrorEl.style.display = "block";
       return;
@@ -332,13 +475,15 @@
       return;
     }
 
-    const submitBtn = document.getElementById("submitBtn");
     submitBtn.disabled = true;
     submitBtn.textContent = "Submitting...";
 
     const payload = {
       userId: userProfile.userId,
       userName: userProfile.displayName,
+      year,
+      form,
+      studentName,
       leaveType,
       startDate,
       endDate,
@@ -353,8 +498,6 @@
         body: JSON.stringify(payload)
       });
 
-      // Apps Script web apps often return opaque responses on cross-origin POST;
-      // treat a non-throwing fetch as success, but still guard on status if available.
       if (res.status && res.status >= 400) {
         throw new Error("Server returned an error.");
       }
