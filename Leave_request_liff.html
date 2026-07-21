@@ -276,7 +276,13 @@
       document.getElementById("profileName").textContent = userProfile.displayName;
       document.getElementById("profileImg").src = userProfile.pictureUrl || "";
     } catch (err) {
-      showError("Could not load your LINE profile. Please reopen this form from the LINE app.");
+      // Surface the real LIFF error (code + message) instead of a generic
+      // message — this is essential for diagnosing platform-specific
+      // issues. Remove/simplify this once the flow is confirmed working.
+      console.error("LIFF init/login error:", err);
+      const code = err && err.code ? err.code : "unknown_code";
+      const detail = err && err.message ? err.message : JSON.stringify(err);
+      showError(`LIFF error [${code}]: ${detail}`);
     }
   }
 
