@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Leave Request</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root {
+    --line-green: #06C755;
+    --line-green-dark: #05A648;
+    --bg: #F7F8FA;
+    --card: #FFFFFF;
+    --text: #1A1A1A;
+    --text-muted: #767676;
+    --border: #E5E7EB;
+    --danger: #FF4D4F;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 32px;
+  }
+  .header {
+    background: var(--line-green);
+    color: white;
+    padding: 20px 20px 24px;
+  }
+  .header h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    opacity: 0.9;
+  }
+  .profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: -18px 16px 0;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .profile img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+  .profile-name {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .profile-label {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  form {
+    margin: 20px 16px 0;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 20px 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .field {
+    margin-bottom: 18px;
+  }
+  .field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .field .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  select, input[type="date"], textarea {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: inherit;
+    background: white;
+    color: var(--text);
+  }
+  select:focus, input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--line-green);
+    box-shadow: 0 0 0 3px rgba(6,199,85,0.12);
+  }
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  .date-row {
+    display: flex;
+    gap: 10px;
+  }
+  .date-row .field {
+    flex: 1;
+  }
+  .day-count {
+    font-size: 12px;
+    color: var(--line-green-dark);
+    font-weight: 600;
+    margin-top: 6px;
+  }
+  button[type="submit"] {
+    width: 100%;
+    padding: 14px;
+    background: var(--line-green);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  button[type="submit"]:disabled {
+    background: #B9E8CB;
+    cursor: not-allowed;
+  }
+  button[type="submit"]:active:not(:disabled) {
+    background: var(--line-green-dark);
+  }
+  .error-text {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 6px;
+    display: none;
+  }
+  .status-screen {
+    display: none;
+    text-align: center;
+    padding: 60px 24px;
+  }
+  .status-screen.show {
+    display: block;
+  }
+  .status-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(6,199,85,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 32px;
+  }
+  .status-icon.error {
+    background: rgba(255,77,79,0.12);
+  }
+  .status-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .status-sub {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  #formScreen.hide { display: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Leave Request</h1>
+  <p>Fill in the details below to submit your request</p>
+</div>
+
+<div class="profile">
+  <img id="profileImg" src="" alt="" />
+  <div>
+    <div class="profile-name" id="profileName">Loading...</div>
+    <div class="profile-label">Requesting as</div>
+  </div>
+</div>
+
+<div id="formScreen">
+  <form id="leaveForm">
+    <div class="field">
+      <label for="leaveType">Leave type</label>
+      <select id="leaveType" required>
+        <option value="" disabled selected>Select leave type</option>
+        <option value="Annual">Annual leave</option>
+        <option value="Sick">Sick leave</option>
+        <option value="Personal">Personal leave</option>
+        <option value="Unpaid">Unpaid leave</option>
+      </select>
+    </div>
+
+    <div class="date-row">
+      <div class="field">
+        <label for="startDate">Start date</label>
+        <input type="date" id="startDate" required />
+      </div>
+      <div class="field">
+        <label for="endDate">End date</label>
+        <input type="date" id="endDate" required />
+      </div>
+    </div>
+    <div class="day-count" id="dayCount"></div>
+    <div class="error-text" id="dateError">End date must be on or after start date.</div>
+
+    <div class="field">
+      <label for="reason">Reason</label>
+      <textarea id="reason" placeholder="Briefly describe the reason for your leave" required></textarea>
+    </div>
+
+    <button type="submit" id="submitBtn">Submit request</button>
+  </form>
+</div>
+
+<div class="status-screen" id="successScreen">
+  <div class="status-icon">✅</div>
+  <div class="status-title">Request submitted</div>
+  <div class="status-sub">Your manager will be notified for approval.</div>
+</div>
+
+<div class="status-screen" id="errorScreen">
+  <div class="status-icon error">⚠️</div>
+  <div class="status-title">Something went wrong</div>
+  <div class="status-sub" id="errorDetail">Please try again in a moment.</div>
+</div>
+
+<script>
+  // ---- CONFIG: replace with your own values ----
+  const LIFF_ID = "YOUR_LIFF_ID";
+  const APPS_SCRIPT_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL";
+  // ------------------------------------------------
+
+  let userProfile = null;
+
+  async function init() {
+    try {
+      await liff.init({ liffId: LIFF_ID });
+
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+
+      userProfile = await liff.getProfile();
+      document.getElementById("profileName").textContent = userProfile.displayName;
+      document.getElementById("profileImg").src = userProfile.pictureUrl || "";
+    } catch (err) {
+      showError("Could not load your LINE profile. Please reopen this form from the LINE app.");
+    }
+  }
+
+  const startDateEl = document.getElementById("startDate");
+  const endDateEl = document.getElementById("endDate");
+  const dayCountEl = document.getElementById("dayCount");
+  const dateErrorEl = document.getElementById("dateError");
+
+  function updateDayCount() {
+    const start = startDateEl.value;
+    const end = endDateEl.value;
+    if (!start || !end) {
+      dayCountEl.textContent = "";
+      dateErrorEl.style.display = "none";
+      return;
+    }
+    const startD = new Date(start);
+    const endD = new Date(end);
+    const diffDays = Math.round((endD - startD) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (diffDays < 1) {
+      dayCountEl.textContent = "";
+      dateErrorEl.style.display = "block";
+    } else {
+      dateErrorEl.style.display = "none";
+      dayCountEl.textContent = `${diffDays} day${diffDays > 1 ? "s" : ""} of leave`;
+    }
+  }
+
+  startDateEl.addEventListener("change", updateDayCount);
+  endDateEl.addEventListener("change", updateDayCount);
+
+  document.getElementById("leaveForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const leaveType = document.getElementById("leaveType").value;
+    const startDate = startDateEl.value;
+    const endDate = endDateEl.value;
+    const reason = document.getElementById("reason").value.trim();
+
+    if (new Date(endDate) < new Date(startDate)) {
+      dateErrorEl.style.display = "block";
+      return;
+    }
+    if (!userProfile) {
+      showError("Your LINE profile hasn't loaded yet. Please wait a moment and try again.");
+      return;
+    }
+
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+
+    const payload = {
+      userId: userProfile.userId,
+      userName: userProfile.displayName,
+      leaveType,
+      startDate,
+      endDate,
+      reason,
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids CORS preflight to Apps Script
+        body: JSON.stringify(payload)
+      });
+
+      // Apps Script web apps often return opaque responses on cross-origin POST;
+      // treat a non-throwing fetch as success, but still guard on status if available.
+      if (res.status && res.status >= 400) {
+        throw new Error("Server returned an error.");
+      }
+
+      document.getElementById("formScreen").classList.add("hide");
+      document.getElementById("successScreen").classList.add("show");
+
+      setTimeout(() => {
+        if (liff.isInClient()) liff.closeWindow();
+      }, 1500);
+
+    } catch (err) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit request";
+      showError("We couldn't submit your request. Check your connection and try again.");
+    }
+  });
+
+  function showError(message) {
+    document.getElementById("errorDetail").textContent = message;
+    document.getElementById("formScreen").classList.add("hide");
+    document.getElementById("errorScreen").classList.add("show");
+  }
+
+  init();
+</script>
+
+</body>
+</html>
