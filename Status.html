@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Leave Requests Status</title>
+  <title>My Leave Requests</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body {
@@ -70,10 +70,10 @@
   </div>
 
   <script>
-    // ===== CONFIG: replace these two values =====
-    const LIFF_ID = '2010725060-TeCR6Z8D';
-    const API_BASE = 'https://script.google.com/macros/s/AKfycbw-kk-1mn-5b9InEplY4jduZ97unym4Y0X3YpQhvPbsulGGdcaZ46fXnhixH4p7VNBwMA/exec';
-    // ==============================================
+    // ===== CONFIG =====
+    const LIFF_ID = 'https://liff.line.me/2010725060-TeCR6Z8D';
+    const API_BASE = 'https://script.google.com/macros/s/AKfycbwvR82T0QdnucsqhOfVCZ-Ew5__mHIlV7kwVXZsk7dk0uAQxy5w4eUt5kn4ObWzxCLGHw/exec';
+    // ===================
 
     liff.init({ liffId: LIFF_ID })
       .then(function() {
@@ -84,15 +84,16 @@
         return liff.getProfile();
       })
       .then(function(profile) {
-        if (!profile) return; // redirecting to login
-        loadLeaveRequests(profile.userId);
+        if (!profile) return; // redirecting to login, stop here
+        const lineUserId = profile.userId; // e.g. "U4af49806..."
+        loadLeaveRequests(lineUserId);
       })
       .catch(function(err) {
         document.getElementById('loading').textContent = 'LIFF error: ' + err;
       });
 
-    function loadLeaveRequests(userId) {
-      const API_URL = API_BASE + '?user=' + encodeURIComponent(userId);
+    function loadLeaveRequests(lineUserId) {
+      const API_URL = API_BASE + '?user=' + encodeURIComponent(lineUserId);
       fetch(API_URL)
         .then(function(response) { return response.json(); })
         .then(renderTable)
