@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Leave Requests</title>
+  <title>My Leave Requests</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -47,8 +48,8 @@
 </head>
 <body>
 
-  <h2>Leave Requests</h2>
-  <div id="loading">Loading data...</div>
+  <h2>My Leave Requests</h2>
+  <div id="loading">Loading...</div>
 
   <div class="table-wrap">
     <table id="leaveTable" style="display:none;">
@@ -69,13 +70,34 @@
   </div>
 
   <script>
-    // Replace with your deployed Apps Script Web App URL
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxOzAFqhW8g73XA6JHdWiNffEsjmBCATAM72yIIHyKs8qH0QM0RT6eMO4srNybkVQyIjw/exec';
+    // ===== CONFIG: replace these two values =====
+    const LIFF_ID = '2010725060-TeCR6Z8D';
+    const API_BASE = 'https://script.google.com/macros/s/AKfycbw-kk-1mn-5b9InEplY4jduZ97unym4Y0X3YpQhvPbsulGGdcaZ46fXnhixH4p7VNBwMA/exec';
+    // ==============================================
 
-    fetch(API_URL)
-      .then(function(response) { return response.json(); })
-      .then(renderTable)
-      .catch(showError);
+    liff.init({ liffId: LIFF_ID })
+      .then(function() {
+        if (!liff.isLoggedIn()) {
+          liff.login();
+          return;
+        }
+        return liff.getProfile();
+      })
+      .then(function(profile) {
+        if (!profile) return; // redirecting to login
+        loadLeaveRequests(profile.userId);
+      })
+      .catch(function(err) {
+        document.getElementById('loading').textContent = 'LIFF error: ' + err;
+      });
+
+    function loadLeaveRequests(userId) {
+      const API_URL = API_BASE + '?user=' + encodeURIComponent(userId);
+      fetch(API_URL)
+        .then(function(response) { return response.json(); })
+        .then(renderTable)
+        .catch(showError);
+    }
 
     function renderTable(data) {
       const tbody = document.getElementById('tableBody');
@@ -88,7 +110,7 @@
       }
 
       if (!data || data.length === 0) {
-        loading.textContent = 'No leave requests found.';
+        loading.textContent = 'No leave requests found for you.';
         return;
       }
 
