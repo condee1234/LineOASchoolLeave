@@ -6,9 +6,7 @@
   <title>My Leave Request Status</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
       margin: 0;
@@ -60,18 +58,16 @@
       white-space: nowrap;
     }
     .badge-approved { background: #e3f6e8; color: #1e7d34; }
-    .badge-pending  { background: #fff3e0; color: #b26a00; }
+    .badge-pending { background: #fff3e0; color: #b26a00; }
     .badge-rejected { background: #fde8e8; color: #c62828; }
-    .badge-default  { background: #eee; color: #555; }
+    .badge-default { background: #eee; color: #555; }
     .row {
       display: flex;
       justify-content: space-between;
       font-size: 13px;
       padding: 3px 0;
     }
-    .row .label {
-      color: #888;
-    }
+    .row .label { color: #888; }
     .row .value {
       text-align: right;
       max-width: 65%;
@@ -83,29 +79,88 @@
 
   <h2>My Leave Request Status</h2>
   <div id="loading">Loading...</div>
-
   <div class="card-list" id="cardList"></div>
 
   <script>
-    // ===== CONFIG =====
-    const LIFF_ID = '2010725060-TeCR6Z8D';
-    const API_BASE = 'https://script.google.com/macros/s/AKfycbxgFk5UD90PFAKfzMoCmFlUBqlbgdYEQGXR0BJ0l-0Hj2-UftyAOFFM5Oj8VbwPtNcq9w/exec';
-    // ===================
+    window.onerror = function(msg, url, line) {
+      document.getElementById('loading').textContent = 'JS Error: ' + msg + ' at line ' + line;
+    };
 
-    liff.init({ liffId: LIFF_ID })
-      .then(function() {
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
-        return liff.getProfile();
-      })
-      .then(function(profile) {
-        if (!profile) return;
-        loadLeaveRequests(profile.userId);
-      })
-      .catch(function(err) {
-        document.getElementById('loading').textContent = 'LIFF error: ' + err;
-      });
+    var LIFF_ID = '2010725060-TeCR6Z8D';
+    var API_BASE = 'https://script.google.com/macros/s/AKfycbxgFk5UD90PFAKfzMoCmFlUBqlbgdYEQGXR0BJ0l-0Hj2-UftyAOFFM5Oj8VbwPtNcq9w/exec';
 
-    function
+    liff.init({ liffId: LIFF_ID }).then(function() {
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+      return liff.getProfile();
+    }).then(function(profile) {
+      if (!profile) return;
+      loadLeaveRequests(profile.userId);
+    }).catch(function(err) {
+      document.getElementById('loading').textContent = 'LIFF error: ' + err;
+    });
+
+    function loadLeaveRequests(lineUserId) {
+      var url = API_BASE + '?user=' + encodeURIComponent(lineUserId);
+      fetch(url)
+        .then(function(res) { return res.json(); })
+        .then(renderCards)
+        .catch(showError);
+    }
+
+    function renderCards(data) {
+      var loading = document.getElementById('loading');
+      var list = document.getElementById('cardList');
+
+      if (data && data.error) {
+        loading.textContent = 'Error: ' + data.error;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        loading.textContent = 'No leave requests found for you.';
+        return;
+      }
+
+      var html = '';
+      for (var i = 0; i < data.length; i++) {
+        var row = data[i];
+        html += '<div class="card">';
+        html += '<div class="card-header">';
+        html += '<span class="card-name">' + safe(row.name) + '</span>';
+        html += '<span class="badge ' + getBadgeClass(row.status) + '">' + safe(row.status) + '</span>';
+        html += '</div>';
+        html += '<div class="row"><span class="label">Form</span><span class="value">' + safe(row.form) + '</span></div>';
+        html += '<div class="row"><span class="label">Leave Type</span><span class="value">' + safe(row.leaveType) + '</span></div>';
+        html += '<div class="row"><span class="label">From</span><span class="value">' + safe(row.from) + '</span></div>';
+        html += '<div class="row"><span class="label">To</span><span class="value">' + safe(row.to) + '</span></div>';
+        html += '<div class="row"><span class="label">Reason</span><span class="value">' + safe(row.reason) + '</span></div>';
+        html += '</div>';
+      }
+
+      list.innerHTML = html;
+      loading.style.display = 'none';
+    }
+
+    function getBadgeClass(status) {
+      if (!status) return 'badge-default';
+      var s = status.toString().toLowerCase();
+      if (s.indexOf('approve') !== -1) return 'badge-approved';
+      if (s.indexOf('pending') !== -1) return 'badge-pending';
+      if (s.indexOf('reject') !== -1) return 'badge-rejected';
+      return 'badge-default';
+    }
+
+    function safe(val) {
+      return (val === null || val === undefined) ? '' : val;
+    }
+
+    function showError(error) {
+      document.getElementById('loading').textContent = 'Error loading data: ' + error.message;
+    }
+  </script>
+
+</body>
+</html>
