@@ -55,7 +55,6 @@
     <table id="leaveTable" style="display:none;">
       <thead>
         <tr>
-          <th>Year</th>
           <th>Form</th>
           <th>Name of Student</th>
           <th>Leave Type</th>
@@ -117,7 +116,6 @@
       tbody.innerHTML = data.map(function(row) {
         const statusClass = getStatusClass(row.status);
         return '<tr>' +
-          '<td>' + safe(row.year) + '</td>' +
           '<td>' + safe(row.form) + '</td>' +
           '<td>' + safe(row.name) + '</td>' +
           '<td>' + safe(row.leaveType) + '</td>' +
