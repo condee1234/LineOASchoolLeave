@@ -89,24 +89,18 @@
     var LIFF_ID = '2010725060-TeCR6Z8D';
     var API_BASE = 'https://script.google.com/macros/s/AKfycbxgFk5UD90PFAKfzMoCmFlUBqlbgdYEQGXR0BJ0l-0Hj2-UftyAOFFM5Oj8VbwPtNcq9w/exec';
 
-    document.getElementById('loading').textContent = 'Step 1: starting liff.init...';
-
-liff.init({ liffId: LIFF_ID }).then(function() {
-  document.getElementById('loading').textContent = 'Step 2: liff.init done, checking login...';
-  if (!liff.isLoggedIn()) {
-    document.getElementById('loading').textContent = 'Step 3: not logged in, redirecting to login...';
-    liff.login();
-    return;
-  }
-  document.getElementById('loading').textContent = 'Step 4: logged in, getting profile...';
-  return liff.getProfile();
-}).then(function(profile) {
-  if (!profile) return;
-  document.getElementById('loading').textContent = 'Step 5: got profile, fetching data...';
-  loadLeaveRequests(profile.userId);
-}).catch(function(err) {
-  document.getElementById('loading').textContent = 'LIFF error: ' + JSON.stringify(err);
-});
+    liff.init({ liffId: LIFF_ID }).then(function() {
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+      return liff.getProfile();
+    }).then(function(profile) {
+      if (!profile) return;
+      loadLeaveRequests(profile.userId);
+    }).catch(function(err) {
+      document.getElementById('loading').textContent = 'LIFF error: ' + JSON.stringify(err);
+    });
 
     function loadLeaveRequests(lineUserId) {
       var url = API_BASE + '?user=' + encodeURIComponent(lineUserId);
@@ -129,6 +123,11 @@ liff.init({ liffId: LIFF_ID }).then(function() {
         loading.textContent = 'No leave requests found for you.';
         return;
       }
+
+      // sort newest first, based on timestamp
+      data.sort(function(a, b) {
+        return new Date(b.timestamp) - new Date(a.timestamp);
+      });
 
       var html = '';
       for (var i = 0; i < data.length; i++) {
